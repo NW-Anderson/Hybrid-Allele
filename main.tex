@@ -1,0 +1,240 @@
+\documentclass[12pt]{article}
+\usepackage{evolution}
+\usepackage{amsmath}
+\usepackage{wrapfig}
+\usepackage{xcolor}
+
+\begin{document}
+
+
+%--------------------------------------------------
+% Title page
+%--------------------------------------------------
+
+\begin{center}
+\textbf{Hybrid Alleles}
+
+Nathan W. Anderson and Heath Blackmon
+\end{center}
+
+\noindent
+Department of Biology; Texas A\&M University; College Station, TX 77843, USA
+
+\noindent
+Author for correspondence: HB, \textit{coleoguy@gmail.com}
+
+
+
+
+%--------------------------------------------------
+% Abstract, Keywords
+%--------------------------------------------------
+
+
+
+\section{Abstract}
+
+CXXXX.
+
+
+\bigskip
+\noindent
+\textit{Keywords: sXXX}
+
+
+\clearpage
+
+
+%--------------------------------------------------
+% Introduction
+%--------------------------------------------------
+
+\linenumbers
+
+
+\section{Introduction}
+In our system of interest, we have a large population of native deer, and a small but stable population of imported deer. We want to model the expected proportion of introgressed (maybe called introduced) genes in our native gene pool n generations after a first hybridization (assuming that we can know this accurately) and compare this to proportions that we find empirically.  
+
+So, we start from a population of 1 introduced allele in a genepool consisting of $pop$ native. 
+
+Deer breed once a year (with the exception of Axis who have two breeding seasons but females will only partake in one). Either way, the synchronized breeding seasons allow us to assume discrete breeding periods. Each breeding period, an individual will either die with some probability or produce a number of offspring (not necessarily of the same type, more on this later) according to some distribution. Breeding structure in deer can range from a single bull elk mating with an entire herd, to each female whitetail being individually courted. For this reason, I believe a zero inflated Poisson may be the most biologically realistic offspring distribution. We inflate the probability of zero more when analyzing elk (where most males are not bulls and produce no offspring) than in whitetail (where only yearlings are often unsuccessful in mating).
+
+From here it might be easiest to explain the rest of the system by constructing the branching model. Questions and comments I have on the model \textcolor{blue}{will appear in blue}. Forgive the abuse of notation and abundant non-sequitur.
+
+%--------------------------------------------------
+% Model
+%--------------------------------------------------
+\section{Offspring Distributions}
+
+We track three types of particles in our gene pool: introgressed, native and migrant.
+
+\textcolor{blue}{A word on 'offspring' distributions. We 'say' that a particle has a single offspring (i = 1 in the following case) if the parent has 0 offspring but survives to the next breeding period. This is because there is 1 particle in n+1 which came from that parent in generation n. Mathematically, we treat it as though the parent has 1 descendent particle and particles only last one iteration. Biologically, we imagine the same particle has survived to the following year.}
+
+\subsection{Introgressed}
+
+Introgressed alleles can only give rise to more introgressed. So, we have to following offspring distribution. 
+
+$P_I(I,N,M) = P($Introgressed particle producing I introgressed, N native  and M migrant particles in the next generation, including itself if it survives$)$.
+
+\begin{equation} 
+    P_I(i,0,0) =
+  \begin{cases}
+    d_I = P(\mbox{death}) & \text{if $i=0$} \\
+    (1-d_I)P_{0 \uparrow P}(i-1) = P(\mbox{not dead and producing i - 1 children})  & \text{if $i \geq 1$} 
+  \end{cases}
+\end{equation}
+
+\textcolor{blue}{For example, when i = 1 we mathematically treat it as 1 descendant particle but it occurs with probability of surviving and producing 0 offspring.}
+
+Where $P_{0 \uparrow P}(i) = 
+\begin{cases}
+\phi + (1- \phi) e^{-\theta} & \text{if $i =0$} \\
+(1 - \phi) \frac{e^{-\theta} \theta^i}{i!} & \text{if $i \geq 1$}
+\end{cases}$
+is the pmf of a zero inflated poisson.
+
+\textcolor{blue}{We will vary the paramaters of $\phi$, $\theta$ and $d_{x}$ between different types to simulate selection. Selection could take the form of different 0 inflation in offspring probabilities, different mean offspring number otherwise, and different death rates. Migrant process will be 0 inflated with its own parameters which we can hopefully infer from literature and genome data. The different parameters for different types will be specified with subscripts where appropriate.}
+
+\subsection{Native}
+
+Natives may give rise to other natives or, with a small probability $h$, give rise to introgressed particles. The logic behind this is that there exists an untracked but stable population of imported deer such that every native deer has a small chance of breeding with an imported and giving rise to introgressed alleles in the gene pool. \textcolor{blue}{I am not sure if we should scale h with population size. If there are 10000 native deer and 100 imported there should be less probability of a given individual crossbreeding than if there were 10 and 100. I am not sure how population size dependence works in practice.}
+
+
+\textcolor{blue}{If we are going to do population dependence for h we might as well implement a carrying capacity on total population by scaling death rate as well. It would make more biological sense (in general) to do "the logistic branching process" kinda thing and deal with population size dependent fitness selection. That does make sense on game ranches with huge yearly culls and an abundance of food??????? Some ranches will have 100+ deer culls to maintain stable populations they can feed, others will not cull to grow the herd.}
+
+\textcolor{blue}{Its weird to think about, the most fit males may be the ones under intense selection for trophy hunts, as well as the least fit which are involved in culls. Most average deer is most fit (least likely to die)????} 
+
+We have $P_N(I,N,M) = P($Native producing I introgressed, N native and M migrant particles the next generation, including itself if it survives).
+
+\begin{equation}
+    P_N(i,n,0) = 
+    \begin{cases}
+    d_N & \text{if $ i = n = 0$} \\
+    (1-d_N) P_{0 \uparrow P}(0) & \text{if $i = 0, n = 1$} \\
+    (1-d_N)(1-h)P_{0 \uparrow P}(n - 1) & \text{if $i=0,n \geq 2$} \\
+    (1-d_N) h P_{0 \uparrow P}(i) & \text{if $i \geq 1, n = 1$}
+    \end{cases}
+\end{equation}
+
+\subsection{Migrants}
+
+Migrants will arrive according to a zero inflated poisson, and will not breed the first breeding season they are present. After they are present for one breeding season they will either join the native (and breeding) population or will die out. So, for migrants we have both the offspring distribution, $P_M(I,N,M)$, and the incoming migration process, $B \sim P_{0 \uparrow P}$. \textcolor{blue}{I chose B in solidarity with existing literature on branching processes with immigration.}
+
+\begin{equation}
+    P_M(0,n,0) =
+    \begin{cases}
+    d_M & \text{if $n = 0$} \\
+    (1-d_M) & \text{if $n = 1$}
+    \end{cases}
+\end{equation}
+
+\textcolor{blue}{Dr Olofsson, I believe you are correct on a possible workaraound to tracking migrant populations by having the migrant process feed directly into the native population in generation n + 1 with a probability that accounts for both arrival and survival of the migrant. I do not know how to create a generating function whose effect is delayed like that. Or do we not have to delay the process we just adjust the parameters of the 0 inflated poisson to account for both the migration rate and survival rate?? I'd love to discuss that more.}
+
+\section{Offspring PGF}
+
+From the offspring distributions we can calculate the offspring probability generating function for each type. Let $K_i$ be the number of offspring (again including parent particles who survive) of type $i$ and $Z^{(0)} = (Z_I^{(0)},Z_N^{(0)},Z_M^{(0)})$ is the number of individuals of each type in the starting population. 
+
+\begin{equation}
+    \varphi_I(I,N,M) = E(I^{k_I} N^{k_N} M^{k_M}|Z^{(0)}=(1,0,0))= \sum \limits_{i = 0} ^ \infty P_I(i,0,0) I^i =d_I +(1-d_I)I(\phi_I + (1-\phi_I)e^{\theta_I (I -1)})
+\end{equation}
+
+\begin{multline}
+    \varphi_N(I,N,M) =E(I^{k_I} N^{k_N} M^{k_M}|Z^{(0)}=(0,1,0)) = \underset{i=0}{\sum \limits_{n=0} ^ \infty} P_N(i,n,0) I^i N^n = \\
+    d_N +(1-d_N)N[\phi_N +(1-\phi_N)e^{-\theta_N} \{ 1 +
+    (1-h)(e^{\theta_N N}-1)+ 
+    h(e^{\theta_N I}-1)\}]
+\end{multline}
+
+\begin{equation}
+    \varphi_M(I,N,M) =E(I^{k_I} N^{k_N} M^{k_M}|Z^{(0)}=(0,0,1)) = d_M + (1-d_M)N
+\end{equation}
+
+So we define the multitype offspring pgf as the column vector of type pgfs:
+
+\begin{equation}
+    \varphi = (\varphi_I, \varphi_N,\varphi_M)^T
+\end{equation}
+Where $(\cdot)^T$ is the transpose. 
+%\begin{equation}
+%    \varphi_M(I,N,M) = \varphi_{M} \cdot \varphi_{M \mbox{-birth}} = (\phi_M + (1-\phi_M)e^{\theta_M(M-1)}) \cdot (d_M + (1-d_M)N)
+% \end{equation}
+
+%Where $\varphi_{M}$ is the pgf of a zero inflated poisson associated with the arrival of migrants. We take the product of the arrival and birth processes because the number of migrants should be a convolution of the two.
+
+\section{PGFs for generation n}
+
+We are usually able to calculate the generating function for the population size of type x  in generation n, $Z_x^{(n)}$,  by exploiting the recursive nature of the above generating functions.
+
+\begin{equation}
+    \varphi^{(n)} = \varphi(\varphi^{(n-1)}) = \mbox{pgf of }Z^{(n)}
+\end{equation}
+
+Where $Z^{(n)}=(Z_I^{(n)},Z_N^{(n)},Z_M^{(n)})$ is the vector of population sizes for the different types in generation n. Applying this to our three types we get
+
+\begin{equation}
+    \varphi_I^{(n)} = \varphi_I(\varphi_I^{(n-1)}, \varphi_N^{(n-1)}, \varphi_M^{(n-1)}) = d_I +(1-d_I)(\varphi_I^{(n-1)})(\phi_I + (1-\phi_I)e^{\theta_I (\varphi_I^{(n-1)} -1)})
+\end{equation}
+
+\begin{multline}
+    \varphi_N^{(n)} = \varphi_N(\varphi_I^{(n-1)}, \varphi_N^{(n-1)}, \varphi_M^{(n-1)}) = \\ 
+    d_N + (1-d_N)(\varphi_N^{(n-1)})[\phi_N +(1-\phi_N)e^{-\theta_N} \{ 1 +
+    (1-h)(e^{\theta_N \cdot \varphi_N^{(n-1)}}-1)+ 
+    h(e^{\theta_N \cdot \varphi_I^{(n-1)}}-1)\}]
+\end{multline}
+
+\begin{equation}
+    \varphi_M^{(n)} = \varphi_M(\varphi_I^{(n-1)}, \varphi_N^{(n-1)}, \varphi_M^{(n-1)}) = d_M + (1-d_M)\varphi_N^{(n-1)}
+\end{equation}
+
+
+
+To account for immigration and arbritrary starting populations, we must do things a bit differently. Define $\varphi_B = \phi_B + (1-\phi_B)e^{\theta_B (M -1)}$ as the pgf of the incoming migrant process and $Z^{(0)} = (1,pop,0)$ is the vector of starting populations mentioned in the introduction. In keeping with Quine's "THE MULTI-TYPE GALTON-WATSON PROCESS WITH IMMIGRATION", we will calculate the pgf of generation n, $Z^{(n)}$, as:
+
+\begin{equation}
+    \psi^{(n)} = (\psi_I^{(n)},\psi_N,^{(n)},\psi_M^{(n)})=\{\varphi^{(n)}\}^{Z^{(0)}} \prod \limits_{r=0}^{n-1} \varphi_B \{\varphi^{(r)}\}
+\end{equation}
+
+It follows by breaking the problem into types:
+\begin{equation}
+    \psi_I^{(n)} = \varphi_I^{(n)}
+\end{equation}
+
+\begin{equation}
+    \psi_N^{(n)} = (\varphi_N^{(n)})^{pop}
+\end{equation}
+
+\begin{equation}
+    \psi_M^{(n)} = \prod \limits_{r=0}^{n-1} \varphi_B \{\varphi_M^{(r)}\}
+\end{equation}
+
+Putting these results together, we calculate the joint pgf of $Z^{(n)} = (Z_I^{(n)},Z_N^{(n)},Z_M^{(n)})$:
+
+\begin{multline}
+    \psi^{(n)} = E(I^{Z_I^{(n)}} N^{Z_N^{(n)}} M^{Z_M^{(n)}}| Z^{(0)}) = \psi_I^{(n)} \psi_N^{(n)} \psi_M^{(n)} =\varphi_I^{(n)}(\varphi_N^{(n)})^{pop} \prod \limits_{r=0}^{n-1} \varphi_B \{\varphi_M^{(r)}\} = \\
+    (d_I +(1-d_I)(\varphi_I^{(n-1)})(\phi_I + (1-\phi_I)e^{\theta_I (\varphi_I^{(n-1)} -1)})) \cdot \\
+    (d_N +
+    (1-d_N)(\varphi_N^{(n-1)})[\phi_N +(1-\phi_N)e^{-\theta_N} \{ 1 +
+    (1-h)(e^{\theta_N \cdot \varphi_N^{(n-1)}}-1)+ 
+    h(e^{\theta_N \cdot \varphi_I^{(n-1)}}-1)\}])^{pop} \cdot \\
+    \prod \limits_{r=0}^{n-1} \phi_B + (1-\phi_B)e^{\theta_B (d_M + (1-d_M)\varphi_N^{(r-1)} -1)}
+\end{multline}
+
+\textcolor{blue}{I am not sure if the correct step was to take the product of all of the cases such as I did above. We do so because the we are essentially taking the convolution of the processes started by each starting individual, and in pgfs the convolution is a product, correct????}
+
+\textcolor{blue}{I am not sure why (u,v) changed to (1,v) in olofsson's paper when deriving psi, do I need that here(I suppose I inadvertantly put in 1 for M in $\varphi_B$ when calculating the $\psi_x^{(n)}$s above)??}
+
+\textcolor{blue}{From here we need to take the derivative of all of our $\varphi_x^{(n)}$ and $\psi^{(n)}$ and create our system of equations to solve numerically (??) in order to finally calculate the expected proportions and variances in generation n as our final result.}
+%We must do something a bit different with migrants, in keeping with Heathcote's eq. 4 in "A branching process allowing for immigration". \textcolor{blue}{I am not 100\% this is the correct way to go about including immigration. We can also do a multitype immigration process ammended onto the joint pdf (below) or should we just use the fundamental recursion on $\varphi_M(I,N,M)$ (above)????} 
+%\begin{equation}
+    %\varphi_M^{(n)} = \varphi_M \varphi_{M \mbox{-birth}}^{(n)}
+%\end{equation}
+%--------------------------------------------------
+% References
+%--------------------------------------------------
+\clearpage
+%\bibliography{refs}
+%\bibliographystyle{evolution}
+
+\end{document}
+
+
